@@ -14,8 +14,10 @@
   .header::before { content:''; position:absolute; top:-30px; right:-30px; width:120px; height:120px; background:rgba(255,255,255,0.1); border-radius:50%; }
   .header::after { content:''; position:absolute; bottom:-20px; left:30px; width:80px; height:80px; background:rgba(255,255,255,0.08); border-radius:50%; }
   .header-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
-  .drive-btn { background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.3); border-radius:20px; color:white; font-family:'Nunito',sans-serif; font-size:12px; font-weight:600; padding:6px 12px; cursor:pointer; display:flex; align-items:center; gap:5px; }
-  .drive-btn.connected { background:rgba(72,199,120,0.3); border-color:rgba(72,199,120,0.5); }
+  .sync-btn { background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.3); border-radius:20px; color:white; font-family:'Nunito',sans-serif; font-size:12px; font-weight:600; padding:6px 12px; cursor:pointer; display:flex; align-items:center; gap:5px; }
+  .sync-btn.syncing { background:rgba(255,200,0,0.3); }
+  .sync-btn.synced { background:rgba(72,199,120,0.3); }
+  .sync-btn.error { background:rgba(255,80,80,0.3); }
   .baby-avatar { width:52px; height:52px; background:rgba(255,255,255,0.25); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; border:2px solid rgba(255,255,255,0.4); }
   .header-name { font-family:'Baloo 2',sans-serif; font-size:28px; font-weight:800; color:white; line-height:1; }
   .header-date { font-size:13px; color:rgba(255,255,255,0.85); font-weight:600; margin-top:2px; }
@@ -47,19 +49,25 @@
   .date-nav span { font-size:12px; font-weight:700; color:#2C3E6B; }
 
   .feed { margin:0 16px 100px; }
-  .feed-item { background:white; border-radius:16px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:flex-start; gap:12px; box-shadow:0 2px 12px rgba(74,144,217,0.08); animation:slideIn 0.3s ease; }
+  .feed-item { background:white; border-radius:16px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:flex-start; gap:12px; box-shadow:0 2px 12px rgba(74,144,217,0.08); animation:slideIn 0.3s ease; cursor:pointer; }
+  .feed-item:active { opacity:0.95; }
   @keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
   .feed-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
   .fi-feeding { background:#FFF3E0; } .fi-sleep { background:#EDE7F6; } .fi-diaper { background:#E8F5E9; } .fi-moment { background:#FCE4EC; }
-  .feed-content { flex:1; }
+  .feed-content { flex:1; min-width:0; }
   .feed-type { font-size:12px; font-weight:700; color:#8A9BC0; text-transform:uppercase; letter-spacing:0.5px; }
   .feed-main { font-size:14px; font-weight:700; color:#2C3E6B; margin-top:2px; }
-  .feed-time { font-size:12px; color:#B0BEC5; font-weight:600; }
+  .feed-time { font-size:12px; color:#B0BEC5; font-weight:600; flex-shrink:0; }
   .feed-photo { width:100%; border-radius:10px; margin-top:8px; max-height:150px; object-fit:cover; }
+  .feed-item-btns { display:none; gap:8px; margin-top:10px; }
+  .feed-item-btns.visible { display:flex; }
+  .feed-btn { flex:1; padding:8px 0; border:none; border-radius:10px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; cursor:pointer; }
+  .feed-btn.edit { background:#EBF4FF; color:#4A90D9; }
+  .feed-btn.del { background:#FFEBEE; color:#E53935; }
 
   .modal-overlay { position:fixed; inset:0; background:rgba(44,62,107,0.5); z-index:100; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.25s ease; }
   .modal-overlay.open { opacity:1; pointer-events:all; }
-  .modal { background:white; border-radius:28px 28px 0 0; padding:24px 20px 32px; width:100%; max-width:420px; transform:translateY(30px); transition:transform 0.3s ease; max-height:90vh; overflow-y:auto; }
+  .modal { background:white; border-radius:28px 28px 0 0; padding:24px 20px 36px; width:100%; max-width:420px; transform:translateY(30px); transition:transform 0.3s ease; max-height:92vh; overflow-y:auto; }
   .modal-overlay.open .modal { transform:translateY(0); }
   .modal-handle { width:40px; height:4px; background:#E0E8F0; border-radius:2px; margin:0 auto 20px; }
   .modal-title { font-family:'Baloo 2',sans-serif; font-size:20px; font-weight:800; color:#2C3E6B; margin-bottom:18px; }
@@ -69,50 +77,59 @@
   .checkbox-row { display:flex; align-items:center; gap:10px; margin-top:14px; background:#F7FAFF; border-radius:12px; padding:12px 14px; cursor:pointer; }
   .checkbox-row input { width:18px; height:18px; cursor:pointer; accent-color:#4A90D9; }
   .checkbox-row label { font-size:14px; font-weight:700; color:#2C3E6B; cursor:pointer; }
-  .photo-upload { border:2px dashed #C5D9F0; border-radius:12px; padding:20px; text-align:center; cursor:pointer; margin-top:8px; background:#F7FAFF; transition:border-color 0.2s; }
-  .photo-upload:hover { border-color:#4A90D9; }
+  .photo-upload { border:2px dashed #C5D9F0; border-radius:12px; padding:20px; text-align:center; cursor:pointer; margin-top:8px; background:#F7FAFF; }
   .pu-icon { font-size:28px; display:block; margin-bottom:6px; }
   .pu-text { font-size:13px; color:#8A9BC0; font-weight:600; }
   .photo-preview-img { width:100%; border-radius:10px; margin-top:8px; max-height:150px; object-fit:cover; display:none; }
   #photoInput { display:none; }
-
+  .edit-badge { background:#FFF8E1; border-radius:10px; padding:8px 12px; font-size:12px; color:#F57F17; font-weight:700; margin-bottom:12px; }
   .btn-save { width:100%; background:linear-gradient(135deg,#4A90D9,#5BA3E8); color:white; border:none; border-radius:16px; padding:14px; font-family:'Baloo 2',sans-serif; font-size:16px; font-weight:700; cursor:pointer; margin-top:20px; transition:transform 0.15s; box-shadow:0 4px 16px rgba(74,144,217,0.35); }
   .btn-save:active { transform:scale(0.98); }
   .btn-save:disabled { opacity:0.6; cursor:not-allowed; }
   .btn-cancel { width:100%; background:none; color:#8A9BC0; border:2px solid #E8EEF8; border-radius:16px; padding:12px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:700; cursor:pointer; margin-top:8px; }
+  .btn-delete-modal { width:100%; background:#FFEBEE; color:#E53935; border:none; border-radius:16px; padding:12px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:700; cursor:pointer; margin-top:8px; }
   .sleep-big-btn { width:100%; border:none; border-radius:16px; padding:16px; font-family:'Baloo 2',sans-serif; font-size:17px; font-weight:700; cursor:pointer; margin-top:10px; transition:transform 0.15s; }
   .sleep-big-btn.start { background:linear-gradient(135deg,#7E57C2,#9575CD); color:white; box-shadow:0 4px 16px rgba(126,87,194,0.35); }
   .sleep-big-btn.end { background:linear-gradient(135deg,#FFA726,#FFB74D); color:white; box-shadow:0 4px 16px rgba(255,152,0,0.35); }
   .sleep-big-btn:active { transform:scale(0.98); }
   .manual-toggle { text-align:center; margin-top:10px; font-size:13px; color:#4A90D9; font-weight:600; cursor:pointer; text-decoration:underline; }
 
-  .drive-setup-box { background:#E3F2FD; border-radius:14px; padding:14px 16px; margin-bottom:16px; }
-  .drive-setup-box label { font-size:13px; font-weight:700; color:#1565C0; display:block; margin-bottom:6px; }
-  .drive-setup-box input { width:100%; border:1.5px solid #90CAF9; border-radius:10px; padding:9px 12px; font-family:'Nunito',sans-serif; font-size:13px; color:#0D47A1; background:white; outline:none; }
-  .drive-status-bar { display:flex; align-items:center; gap:8px; background:#E8F5E9; border-radius:10px; padding:8px 12px; font-size:12px; font-weight:700; color:#2E7D32; margin-top:10px; }
-  .drive-status-bar.error { background:#FFEBEE; color:#C62828; }
-  .drive-status-bar.saving { background:#FFF8E1; color:#F57F17; }
+  .confirm-overlay { position:fixed; inset:0; background:rgba(44,62,107,0.6); z-index:300; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .confirm-box { background:white; border-radius:24px; padding:28px 24px; width:100%; max-width:320px; text-align:center; }
+  .confirm-emoji { font-size:40px; display:block; margin-bottom:12px; }
+  .confirm-title { font-family:'Baloo 2',sans-serif; font-size:18px; font-weight:800; color:#2C3E6B; margin-bottom:6px; }
+  .confirm-sub { font-size:13px; color:#8A9BC0; margin-bottom:20px; }
+  .confirm-btns { display:flex; gap:10px; }
+  .confirm-btn { flex:1; padding:12px; border:none; border-radius:14px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
+  .confirm-btn.cancel { background:#F0F4FF; color:#4A90D9; }
+  .confirm-btn.confirm { background:#E53935; color:white; }
+
+  .loading-overlay { position:fixed; inset:0; background:rgba(235,244,255,0.95); z-index:200; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+  .loading-emoji { font-size:52px; animation:bounce 1s infinite; }
+  @keyframes bounce { 0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);} }
+  .loading-text { font-family:'Baloo 2',sans-serif; font-size:18px; font-weight:700; color:#4A90D9; }
+  .loading-sub { font-size:13px; color:#8A9BC0; font-weight:600; }
 
   .empty-feed { text-align:center; padding:40px 20px; color:#B0BEC5; }
   .empty-feed .ef-emoji { font-size:48px; display:block; margin-bottom:12px; }
   .empty-feed p { font-size:14px; font-weight:600; }
-
-  .toast { position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-80px); background:#2C3E6B; color:white; border-radius:20px; padding:10px 20px; font-size:14px; font-weight:700; z-index:999; transition:transform 0.3s ease; white-space:nowrap; }
+  .toast { position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-80px); background:#2C3E6B; color:white; border-radius:20px; padding:10px 20px; font-size:14px; font-weight:700; z-index:999; transition:transform 0.3s ease; white-space:nowrap; max-width:90vw; text-align:center; }
   .toast.show { transform:translateX(-50%) translateY(0); }
-
-  .sync-dot { width:8px; height:8px; border-radius:50%; background:#48C778; display:inline-block; margin-right:4px; }
-  .sync-dot.off { background:#B0BEC5; }
 </style>
 </head>
 <body>
-<div class="app">
 
+<div class="loading-overlay" id="loadingOverlay">
+  <span class="loading-emoji">👶</span>
+  <div class="loading-text">Carregando o dia do Gabriel...</div>
+  <div class="loading-sub">Buscando registros no Drive</div>
+</div>
+
+<div class="app">
   <div class="header">
     <div class="header-top">
       <div class="baby-avatar">👶</div>
-      <button class="drive-btn" id="driveBtn" onclick="openModal('drive')">
-        ☁️ Google Drive
-      </button>
+      <button class="sync-btn" id="syncBtn" onclick="syncFromDrive()">🔄 Atualizar</button>
     </div>
     <div class="header-name">✨ Gabriel</div>
     <div class="header-date" id="headerDate"></div>
@@ -145,7 +162,6 @@
   </div>
 
   <div class="summary-strip" id="summaryStrip"></div>
-
   <div class="feed-header">
     <div class="feed-title">📋 Diário do dia</div>
     <div class="date-nav">
@@ -154,403 +170,289 @@
       <button onclick="changeDay(1)">›</button>
     </div>
   </div>
-
   <div class="feed" id="feed"></div>
 </div>
 
 <div class="toast" id="toast"></div>
-
 <div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
   <div class="modal" id="modal"></div>
 </div>
 
 <script>
-// ── Estado ─────────────────────────────────────────────────
-const state = {
-  records: JSON.parse(localStorage.getItem('gabriel_records') || '[]'),
-  currentDate: new Date(),
-  sleepStart: localStorage.getItem('gabriel_sleep_start') || null,
-  scriptUrl: localStorage.getItem('gabriel_script_url') || ''
-};
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzXy7F6u3QqyGA5V7HrBJ7MylllfGOkaubc4HJmHdg1cGTXo-f11eB7W2UvN83W4--oMA/exec';
+const state={records:[],currentDate:new Date(),sleepStart:localStorage.getItem('gabriel_sleep_start')||null,expandedId:null,editingId:null};
 
-// ── Utilitários ────────────────────────────────────────────
-function formatDate(d) {
-  return d.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
-}
-function formatDateKey(d) {
-  return d.toISOString().split('T')[0];
-}
-function formatTime(d) {
-  return (typeof d === 'string' ? new Date(d) : d).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-}
-function timeNow() {
-  const n = new Date();
-  return n.toTimeString().slice(0,5);
-}
-function save() {
-  localStorage.setItem('gabriel_records', JSON.stringify(state.records));
-}
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
-}
-function updateDriveBtn() {
-  const btn = document.getElementById('driveBtn');
-  if (state.scriptUrl) {
-    btn.textContent = '✅ Drive conectado';
-    btn.classList.add('connected');
-  } else {
-    btn.textContent = '☁️ Google Drive';
-    btn.classList.remove('connected');
+function formatDate(d){return d.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});}
+function formatDateKey(d){return d.toISOString().split('T')[0];}
+function formatTime(d){return(typeof d==='string'?new Date(d):d).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+function timeNow(){return new Date().toTimeString().slice(0,5);}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+async function syncFromDrive(showFeedback=true){
+  const btn=document.getElementById('syncBtn');
+  btn.className='sync-btn syncing';btn.textContent='⏳ Atualizando...';
+  const key=formatDateKey(state.currentDate);
+  try{
+    const res=await fetch(`${SCRIPT_URL}?date=${key}`);
+    const data=await res.json();
+    if(data.success&&data.records&&data.records.length>0){
+      const driveRecords=data.records.map(r=>parseDriveRecord(r,key));
+      const merged=mergeRecords(state.records.filter(r=>r.date===key),driveRecords);
+      state.records=[...state.records.filter(r=>r.date!==key),...merged];
+    }
+    btn.className='sync-btn synced';btn.textContent='✅ Atualizado';
+    setTimeout(()=>{btn.className='sync-btn';btn.textContent='🔄 Atualizar';},3000);
+    if(showFeedback)showToast('✅ Dados atualizados!');
+  }catch(e){
+    btn.className='sync-btn error';btn.textContent='⚠️ Erro';
+    setTimeout(()=>{btn.className='sync-btn';btn.textContent='🔄 Atualizar';},3000);
+    if(showFeedback)showToast('⚠️ Sem conexão com Drive');
   }
+  renderFeed();
 }
 
-// ── Google Drive sync ──────────────────────────────────────
-async function syncToDrive(record) {
-  if (!state.scriptUrl) return;
-  try {
-    showToast('☁️ Salvando no Drive...');
-    await fetch(state.scriptUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveRecord', record }),
-      headers: { 'Content-Type': 'text/plain' }
-    });
-    showToast('✅ Salvo no Drive!');
-  } catch (e) {
-    showToast('⚠️ Erro ao salvar no Drive');
-  }
+function parseDriveRecord(r,date){
+  const typeRaw=(r.type||'').toString();
+  let type='feeding';
+  if(typeRaw.includes('Soneca')||typeRaw.includes('😴'))type='sleep';
+  else if(typeRaw.includes('Fralda')||typeRaw.includes('🚼'))type='diaper';
+  else if(typeRaw.includes('Momento')||typeRaw.includes('📸'))type='moment';
+  const time=(r.time||'').toString().slice(0,5);
+  const d1=(r.detail1||'').toString(),d2=(r.detail2||'').toString(),obs=(r.obs||'').toString(),photoUrl=(r.photoUrl||'').toString();
+  const id=uid();
+  if(type==='feeding')return{id,type,date,time,volume:d1.replace(' ml','').trim()};
+  if(type==='sleep')return{id,type,date,time,endTime:d1.replace('Acordou: ','').trim(),duration:parseInt(d2)||0};
+  if(type==='diaper')return{id,type,date,time,hasPoop:d1.includes('cocô'),obs};
+  if(type==='moment')return{id,type,date,time,description:d1,photo:photoUrl||null};
+  return{id,type,date,time};
+}
+function mergeRecords(local,drive){
+  const key=r=>`${r.type}-${r.time}`;
+  const map=new Map();
+  drive.forEach(r=>map.set(key(r),r));
+  local.forEach(r=>{if(!map.has(key(r)))map.set(key(r),r);});
+  return Array.from(map.values());
+}
+async function pushToDrive(record){
+  try{await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'saveRecord',record}),headers:{'Content-Type':'text/plain'}});}
+  catch(e){showToast('⚠️ Salvo localmente. Sem conexão.');}
+}
+async function uploadPhotoToDrive(base64,filename){
+  try{const res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'savePhoto',photo:base64,filename}),headers:{'Content-Type':'text/plain'}});const data=await res.json();return data.url||null;}
+  catch(e){return null;}
 }
 
-async function uploadPhotoToDrive(base64, filename) {
-  if (!state.scriptUrl) return null;
-  try {
-    const res = await fetch(state.scriptUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'savePhoto', photo: base64, filename }),
-      headers: { 'Content-Type': 'text/plain' }
-    });
-    const data = await res.json();
-    return data.url || null;
-  } catch (e) {
-    return null;
-  }
-}
-
-// ── Renderização ───────────────────────────────────────────
-function renderFeed() {
-  const key = formatDateKey(state.currentDate);
-  const isToday = key === formatDateKey(new Date());
-  document.getElementById('dateNavLabel').textContent = isToday ? 'Hoje' : state.currentDate.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
-  document.getElementById('headerDate').textContent = formatDate(new Date());
-
-  const records = state.records.filter(r => r.date === key).sort((a,b) => a.time.localeCompare(b.time));
-
-  const feedings = records.filter(r => r.type === 'feeding');
-  const sleeps = records.filter(r => r.type === 'sleep');
-  const poops = records.filter(r => r.type === 'diaper' && r.hasPoop);
-  const moments = records.filter(r => r.type === 'moment');
-  const totalVol = feedings.reduce((s,r) => s + (parseInt(r.volume)||0), 0);
-  const totalSleep = sleeps.reduce((s,r) => s + (parseInt(r.duration)||0), 0);
-
-  let pills = '';
-  if (feedings.length) pills += `<div class="summary-pill">🍼 <span class="pill-val">${feedings.length}x</span> · ${totalVol}ml</div>`;
-  if (sleeps.length) pills += `<div class="summary-pill">😴 <span class="pill-val">${sleeps.length}x</span> · ${totalSleep}min</div>`;
-  if (poops.length) pills += `<div class="summary-pill">💩 <span class="pill-val">${poops.length}x</span></div>`;
-  if (moments.length) pills += `<div class="summary-pill">📸 <span class="pill-val">${moments.length}</span></div>`;
-  document.getElementById('summaryStrip').innerHTML = pills;
-
-  const feed = document.getElementById('feed');
-  if (!records.length) {
-    feed.innerHTML = `<div class="empty-feed"><span class="ef-emoji">🌙</span><p>Nenhum registro ainda.<br>Toque nos botões acima para começar!</p></div>`;
-    return;
-  }
-
-  feed.innerHTML = records.map(r => {
-    let icon='', cls='', main='', sub='';
-    if (r.type === 'feeding') { icon='🍼'; cls='fi-feeding'; main=`${r.volume} ml`; sub='Mamada'; }
-    else if (r.type === 'sleep') { icon='😴'; cls='fi-sleep'; main=`${r.duration} minutos`; sub=r.endTime ? `${r.time} → ${r.endTime}` : 'Dormindo...'; }
-    else if (r.type === 'diaper') { icon='🚼'; cls='fi-diaper'; main=r.hasPoop ? '💩 Com cocô' : 'Só xixi'; sub=r.obs || 'Troca de fralda'; }
-    else if (r.type === 'moment') { icon='📸'; cls='fi-moment'; main=r.description; sub='Momento especial'; }
-    const photo = r.photo ? `<img src="${r.photo}" class="feed-photo" />` : '';
-    return `<div class="feed-item">
+function renderFeed(){
+  const key=formatDateKey(state.currentDate);
+  const isToday=key===formatDateKey(new Date());
+  document.getElementById('dateNavLabel').textContent=isToday?'Hoje':state.currentDate.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  document.getElementById('headerDate').textContent=formatDate(new Date());
+  const records=state.records.filter(r=>r.date===key).sort((a,b)=>a.time.localeCompare(b.time));
+  const feedings=records.filter(r=>r.type==='feeding'),sleeps=records.filter(r=>r.type==='sleep');
+  const poops=records.filter(r=>r.type==='diaper'&&r.hasPoop),moments=records.filter(r=>r.type==='moment');
+  const totalVol=feedings.reduce((s,r)=>s+(parseInt(r.volume)||0),0);
+  const totalSleep=sleeps.reduce((s,r)=>s+(parseInt(r.duration)||0),0);
+  let pills='';
+  if(feedings.length)pills+=`<div class="summary-pill">🍼 <span class="pill-val">${feedings.length}x</span> · ${totalVol}ml</div>`;
+  if(sleeps.length)pills+=`<div class="summary-pill">😴 <span class="pill-val">${sleeps.length}x</span> · ${totalSleep}min</div>`;
+  if(poops.length)pills+=`<div class="summary-pill">💩 <span class="pill-val">${poops.length}x</span></div>`;
+  if(moments.length)pills+=`<div class="summary-pill">📸 <span class="pill-val">${moments.length}</span></div>`;
+  document.getElementById('summaryStrip').innerHTML=pills;
+  const feed=document.getElementById('feed');
+  if(!records.length){feed.innerHTML=`<div class="empty-feed"><span class="ef-emoji">🌙</span><p>Nenhum registro ainda.<br>Toque nos botões acima para começar!</p></div>`;return;}
+  feed.innerHTML=records.map(r=>{
+    let icon='',cls='',main='',sub='';
+    if(r.type==='feeding'){icon='🍼';cls='fi-feeding';main=`${r.volume} ml`;sub='Mamada';}
+    else if(r.type==='sleep'){icon='😴';cls='fi-sleep';main=`${r.duration} min`;sub=r.endTime?`${r.time} → ${r.endTime}`:'Dormindo...';}
+    else if(r.type==='diaper'){icon='🚼';cls='fi-diaper';main=r.hasPoop?'💩 Com cocô':'Só xixi';sub=r.obs||'Troca de fralda';}
+    else if(r.type==='moment'){icon='📸';cls='fi-moment';main=r.description;sub='Momento especial';}
+    const photo=r.photo?`<img src="${r.photo}" class="feed-photo" />`:'';
+    const expanded=state.expandedId===r.id;
+    return`<div class="feed-item" onclick="toggleExpand('${r.id}')">
       <div class="feed-icon ${cls}">${icon}</div>
       <div class="feed-content">
         <div class="feed-type">${sub}</div>
         <div class="feed-main">${main}</div>
         ${photo}
+        <div class="feed-item-btns ${expanded?'visible':''}">
+          <button class="feed-btn edit" onclick="event.stopPropagation();editRecord('${r.id}')">✏️ Editar</button>
+          <button class="feed-btn del" onclick="event.stopPropagation();confirmDelete('${r.id}')">🗑️ Excluir</button>
+        </div>
       </div>
       <div class="feed-time">${r.time}</div>
     </div>`;
   }).join('');
 }
 
-function changeDay(delta) {
-  const d = new Date(state.currentDate);
-  d.setDate(d.getDate() + delta);
-  const today = new Date(); today.setHours(23,59,59);
-  if (d <= today) { state.currentDate = d; renderFeed(); }
+function toggleExpand(id){state.expandedId=state.expandedId===id?null:id;renderFeed();}
+function changeDay(delta){
+  const d=new Date(state.currentDate);d.setDate(d.getDate()+delta);
+  const today=new Date();today.setHours(23,59,59);
+  if(d<=today){state.currentDate=d;renderFeed();syncFromDrive(false);}
 }
 
-// ── Modais ─────────────────────────────────────────────────
-function openModal(type) {
-  document.getElementById('modal').innerHTML = getModalContent(type);
-  document.getElementById('modalOverlay').classList.add('open');
+function confirmDelete(id){
+  const overlay=document.createElement('div');
+  overlay.className='confirm-overlay';
+  overlay.innerHTML=`<div class="confirm-box">
+    <span class="confirm-emoji">🗑️</span>
+    <div class="confirm-title">Excluir registro?</div>
+    <div class="confirm-sub">Essa ação não pode ser desfeita.</div>
+    <div class="confirm-btns">
+      <button class="confirm-btn cancel" onclick="this.closest('.confirm-overlay').remove()">Cancelar</button>
+      <button class="confirm-btn confirm" onclick="deleteRecord('${id}');this.closest('.confirm-overlay').remove()">Excluir</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
 }
-function closeModalDirect() {
-  document.getElementById('modalOverlay').classList.remove('open');
+function deleteRecord(id){
+  state.records=state.records.filter(r=>r.id!==id);
+  state.expandedId=null;renderFeed();showToast('🗑️ Registro excluído');
 }
-function closeModalOutside(e) {
-  if (e.target === document.getElementById('modalOverlay')) closeModalDirect();
-}
-function toggleManual() {
-  const f = document.getElementById('manualFields');
-  if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
-}
-function togglePoop() {
-  const cb = document.getElementById('d_poop');
-  if (cb) cb.checked = !cb.checked;
+function editRecord(id){
+  const record=state.records.find(r=>r.id===id);
+  if(!record)return;
+  state.editingId=id;openModal(record.type,record);
 }
 
-function getModalContent(type) {
-  if (type === 'feeding') return `
-    <div class="modal-handle"></div>
-    <div class="modal-title">🍼 Mamada</div>
-    <label class="field-label">Horário</label>
-    <input class="field-input" id="f_time" type="time" value="${timeNow()}" />
-    <label class="field-label">Volume (ml)</label>
-    <input class="field-input" id="f_vol" type="number" placeholder="Ex: 120" min="0" max="500" />
-    <button class="btn-save" onclick="saveFeeding()">💾 Salvar mamada</button>
-    <button class="btn-cancel" onclick="closeModalDirect()">Cancelar</button>`;
+function openModal(type,editData=null){document.getElementById('modal').innerHTML=getModalContent(type,editData);document.getElementById('modalOverlay').classList.add('open');}
+function closeModalDirect(){state.editingId=null;document.getElementById('modalOverlay').classList.remove('open');}
+function closeModalOutside(e){if(e.target===document.getElementById('modalOverlay'))closeModalDirect();}
+function toggleManual(){const f=document.getElementById('manualFields');if(f)f.style.display=f.style.display==='none'?'block':'none';}
+function togglePoop(){const cb=document.getElementById('d_poop');if(cb)cb.checked=!cb.checked;}
 
-  if (type === 'sleep') {
-    if (state.sleepStart) {
-      const start = new Date(state.sleepStart);
-      const elapsed = Math.round((Date.now() - start) / 60000);
-      return `
-        <div class="modal-handle"></div>
-        <div class="modal-title">😴 Soneca em andamento</div>
+function getModalContent(type,edit=null){
+  const isEdit=!!edit;
+  const badge=isEdit?`<div class="edit-badge">✏️ Editando registro</div>`:'';
+  const saveLabel=isEdit?'💾 Salvar alterações':'💾 Salvar';
+  const delBtn=isEdit?`<button class="btn-delete-modal" onclick="confirmDelete('${edit.id}');closeModalDirect()">🗑️ Excluir este registro</button>`:'';
+
+  if(type==='feeding')return`<div class="modal-handle"></div>${badge}<div class="modal-title">🍼 Mamada</div>
+    <label class="field-label">Horário</label><input class="field-input" id="f_time" type="time" value="${edit?.time||timeNow()}" />
+    <label class="field-label">Volume (ml)</label><input class="field-input" id="f_vol" type="number" placeholder="Ex: 120" min="0" max="500" value="${edit?.volume||''}" />
+    <button class="btn-save" onclick="saveFeeding()">${saveLabel}</button>${delBtn}<button class="btn-cancel" onclick="closeModalDirect()">Cancelar</button>`;
+
+  if(type==='sleep'){
+    if(!isEdit&&state.sleepStart){
+      const start=new Date(state.sleepStart),elapsed=Math.round((Date.now()-start)/60000);
+      return`<div class="modal-handle"></div><div class="modal-title">😴 Soneca em andamento</div>
         <div style="background:#F3E5F5;border-radius:14px;padding:14px;text-align:center;margin-bottom:4px;">
           <div style="font-size:13px;color:#7B1FA2;font-weight:700;">Dormindo desde</div>
           <div style="font-size:26px;font-weight:800;color:#6A1B9A;margin-top:4px;">${formatTime(start)}</div>
           <div style="font-size:13px;color:#9C27B0;margin-top:2px;">há ${elapsed} minuto${elapsed!==1?'s':''}</div>
         </div>
         <button class="sleep-big-btn end" onclick="endSleep()">☀️ Gabriel acordou!</button>
-        <div class="manual-toggle" onclick="toggleManual()">✏️ Corrigir horário manualmente</div>
+        <div class="manual-toggle" onclick="toggleManual()">✏️ Corrigir horário</div>
         <div id="manualFields" style="display:none;margin-top:12px;">
-          <label class="field-label">Horário início</label>
-          <input class="field-input" id="s_start" type="time" value="${start.toTimeString().slice(0,5)}" />
-          <label class="field-label">Horário fim</label>
-          <input class="field-input" id="s_end" type="time" value="${timeNow()}" />
-          <button class="btn-save" onclick="saveSleepManual()" style="margin-top:12px;">💾 Salvar manualmente</button>
+          <label class="field-label">Início</label><input class="field-input" id="s_start" type="time" value="${start.toTimeString().slice(0,5)}" />
+          <label class="field-label">Fim</label><input class="field-input" id="s_end" type="time" value="${timeNow()}" />
+          <button class="btn-save" onclick="saveSleepManual()" style="margin-top:12px;">💾 Salvar</button>
         </div>
         <button class="btn-cancel" onclick="closeModalDirect()">Fechar</button>`;
     }
-    return `
-      <div class="modal-handle"></div>
-      <div class="modal-title">😴 Soneca</div>
-      <button class="sleep-big-btn start" onclick="startSleep()">🌙 Gabriel dormiu agora!</button>
+    return`<div class="modal-handle"></div>${badge}<div class="modal-title">😴 Soneca</div>
+      ${!isEdit?`<button class="sleep-big-btn start" onclick="startSleep()">🌙 Gabriel dormiu agora!</button>
       <div class="manual-toggle" onclick="toggleManual()">✏️ Registrar manualmente</div>
-      <div id="manualFields" style="display:none;margin-top:12px;">
-        <label class="field-label">Horário início</label>
-        <input class="field-input" id="s_start" type="time" value="${timeNow()}" />
-        <label class="field-label">Horário fim</label>
-        <input class="field-input" id="s_end" type="time" value="${timeNow()}" />
-        <button class="btn-save" onclick="saveSleepManual()" style="margin-top:12px;">💾 Salvar manualmente</button>
-      </div>
-      <button class="btn-cancel" onclick="closeModalDirect()">Cancelar</button>`;
+      <div id="manualFields" style="display:none;margin-top:12px;">`:'<div>'}
+        <label class="field-label">Início</label><input class="field-input" id="s_start" type="time" value="${edit?.time||timeNow()}" />
+        <label class="field-label">Fim</label><input class="field-input" id="s_end" type="time" value="${edit?.endTime||timeNow()}" />
+        <button class="btn-save" onclick="saveSleepManual()" style="margin-top:12px;">${saveLabel}</button>
+      </div>${delBtn}<button class="btn-cancel" onclick="closeModalDirect()">Cancelar</button>`;
   }
 
-  if (type === 'diaper') return `
-    <div class="modal-handle"></div>
-    <div class="modal-title">🚼 Troca de fralda</div>
-    <label class="field-label">Horário</label>
-    <input class="field-input" id="d_time" type="time" value="${timeNow()}" />
-    <div class="checkbox-row" onclick="togglePoop()">
-      <input type="checkbox" id="d_poop" />
-      <label for="d_poop">💩 Tinha cocô</label>
-    </div>
+  if(type==='diaper')return`<div class="modal-handle"></div>${badge}<div class="modal-title">🚼 Troca de fralda</div>
+    <label class="field-label">Horário</label><input class="field-input" id="d_time" type="time" value="${edit?.time||timeNow()}" />
+    <div class="checkbox-row" onclick="togglePoop()"><input type="checkbox" id="d_poop" ${edit?.hasPoop?'checked':''} /><label for="d_poop">💩 Tinha cocô</label></div>
     <label class="field-label">Observação <span style="font-weight:400;text-transform:none;font-size:11px;">(opcional)</span></label>
-    <textarea class="field-input" id="d_obs" rows="2" placeholder="Ex: fezes esverdeadas, irritação..."></textarea>
-    <button class="btn-save" onclick="saveDiaper()">💾 Salvar troca</button>
-    <button class="btn-cancel" onclick="closeModalDirect()">Cancelar</button>`;
+    <textarea class="field-input" id="d_obs" rows="2" placeholder="Ex: fezes esverdeadas...">${edit?.obs||''}</textarea>
+    <button class="btn-save" onclick="saveDiaper()">${saveLabel}</button>${delBtn}<button class="btn-cancel" onclick="closeModalDirect()">Cancelar</button>`;
 
-  if (type === 'moment') return `
-    <div class="modal-handle"></div>
-    <div class="modal-title">📸 Momento especial</div>
-    <label class="field-label">Horário</label>
-    <input class="field-input" id="m_time" type="time" value="${timeNow()}" />
+  if(type==='moment')return`<div class="modal-handle"></div>${badge}<div class="modal-title">📸 Momento especial</div>
+    <label class="field-label">Horário</label><input class="field-input" id="m_time" type="time" value="${edit?.time||timeNow()}" />
     <label class="field-label">O que aconteceu?</label>
-    <textarea class="field-input" id="m_desc" rows="3" placeholder="Ex: Gabriel deu a primeira risada hoje!"></textarea>
+    <textarea class="field-input" id="m_desc" rows="3" placeholder="Ex: Gabriel deu a primeira risada!">${edit?.description||''}</textarea>
     <label class="field-label">Foto <span style="font-weight:400;text-transform:none;font-size:11px;">(opcional)</span></label>
+    ${edit?.photo?`<img src="${edit.photo}" class="photo-preview-img" id="photoPreview" style="display:block;" />`:`
     <div class="photo-upload" id="photoUploadArea" onclick="document.getElementById('photoInput').click()">
-      <span class="pu-icon">📷</span>
-      <div class="pu-text">Toque para tirar ou escolher uma foto</div>
-    </div>
-    <img id="photoPreview" class="photo-preview-img" />
+      <span class="pu-icon">📷</span><div class="pu-text">Toque para tirar ou escolher uma foto</div>
+    </div><img id="photoPreview" class="photo-preview-img" />`}
     <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="previewPhoto(this)" />
-    <button class="btn-save" id="btnSaveMoment" onclick="saveMoment()">💾 Salvar momento</button>
+    <button class="btn-save" id="btnSaveMoment" onclick="saveMoment()">${saveLabel}</button>${delBtn}
     <button class="btn-cancel" onclick="closeModalDirect()">Cancelar</button>`;
-
-  if (type === 'drive') return `
-    <div class="modal-handle"></div>
-    <div class="modal-title">☁️ Conectar Google Drive</div>
-    <p style="font-size:14px;color:#8A9BC0;line-height:1.6;margin-bottom:16px;">Cole aqui a URL do seu Google Apps Script para sincronizar os dados com sua planilha e Drive.</p>
-    <div class="drive-setup-box">
-      <label>🔗 URL do Web App (Google Apps Script)</label>
-      <input type="url" id="driveUrl" placeholder="https://script.google.com/macros/s/..." value="${state.scriptUrl}" />
-    </div>
-    ${state.scriptUrl ? `<div class="drive-status-bar">✅ Drive conectado e funcionando!</div>` : ''}
-    <button class="btn-save" onclick="saveDriveUrl()">💾 Salvar configuração</button>
-    ${state.scriptUrl ? `<button class="btn-cancel" style="color:#E57373;border-color:#FFCDD2;" onclick="disconnectDrive()">❌ Desconectar Drive</button>` : ''}
-    <button class="btn-cancel" onclick="closeModalDirect()">Fechar</button>`;
 }
 
-// ── Salvar registros ───────────────────────────────────────
-function saveFeeding() {
-  const time = document.getElementById('f_time').value;
-  const vol = document.getElementById('f_vol').value;
-  if (!vol) { showToast('⚠️ Informe o volume!'); return; }
-  const record = { type:'feeding', date:formatDateKey(new Date()), time, volume:vol };
-  state.records.push(record);
-  save(); closeModalDirect(); renderFeed();
-  showToast('🍼 Mamada registrada!');
-  syncToDrive(record);
+function upsertRecord(record){
+  if(state.editingId){
+    const idx=state.records.findIndex(r=>r.id===state.editingId);
+    if(idx>=0){record.id=state.editingId;state.records[idx]=record;}
+    state.editingId=null;
+  }else{record.id=uid();state.records.push(record);}
 }
 
-function startSleep() {
-  state.sleepStart = new Date().toISOString();
-  localStorage.setItem('gabriel_sleep_start', state.sleepStart);
+function saveFeeding(){
+  const time=document.getElementById('f_time').value,vol=document.getElementById('f_vol').value;
+  if(!vol){showToast('⚠️ Informe o volume!');return;}
+  const record={type:'feeding',date:formatDateKey(new Date()),time,volume:vol};
+  upsertRecord(record);closeModalDirect();renderFeed();
+  showToast('🍼 Mamada registrada!');pushToDrive(record);
+}
+function startSleep(){
+  state.sleepStart=new Date().toISOString();localStorage.setItem('gabriel_sleep_start',state.sleepStart);
   document.getElementById('sleepCard').classList.add('sleep-active');
-  document.getElementById('sleepEmoji').textContent = '🌙';
-  document.getElementById('sleepLabel').textContent = 'Dormindo...';
-  document.getElementById('sleepSub').textContent = 'Toque para acordar';
-  closeModalDirect();
-  showToast('🌙 Boa soneca, Gabriel!');
+  document.getElementById('sleepEmoji').textContent='🌙';document.getElementById('sleepLabel').textContent='Dormindo...';document.getElementById('sleepSub').textContent='Toque para acordar';
+  closeModalDirect();showToast('🌙 Boa soneca, Gabriel!');
 }
-
-function endSleep() {
-  const start = new Date(state.sleepStart);
-  const end = new Date();
-  const duration = Math.round((end - start) / 60000);
-  const record = { type:'sleep', date:formatDateKey(new Date()), time:formatTime(start), endTime:formatTime(end), duration };
-  state.records.push(record);
-  state.sleepStart = null;
-  localStorage.removeItem('gabriel_sleep_start');
+function endSleep(){
+  const start=new Date(state.sleepStart),end=new Date(),duration=Math.round((end-start)/60000);
+  const record={type:'sleep',date:formatDateKey(new Date()),time:formatTime(start),endTime:formatTime(end),duration};
+  upsertRecord(record);state.sleepStart=null;localStorage.removeItem('gabriel_sleep_start');
   document.getElementById('sleepCard').classList.remove('sleep-active');
-  document.getElementById('sleepEmoji').textContent = '😴';
-  document.getElementById('sleepLabel').textContent = 'Soneca';
-  document.getElementById('sleepSub').textContent = 'Início & duração';
-  save(); closeModalDirect(); renderFeed();
-  showToast(`😴 Soneca de ${duration} minutos!`);
-  syncToDrive(record);
+  document.getElementById('sleepEmoji').textContent='😴';document.getElementById('sleepLabel').textContent='Soneca';document.getElementById('sleepSub').textContent='Início & duração';
+  closeModalDirect();renderFeed();showToast(`😴 Soneca de ${duration} minutos!`);pushToDrive(record);
 }
-
-function saveSleepManual() {
-  const s = document.getElementById('s_start')?.value;
-  const e = document.getElementById('s_end')?.value;
-  if (!s || !e) { showToast('⚠️ Informe os horários!'); return; }
-  const [sh,sm] = s.split(':').map(Number);
-  const [eh,em] = e.split(':').map(Number);
-  let duration = (eh*60+em) - (sh*60+sm);
-  if (duration < 0) duration += 24*60;
-  const record = { type:'sleep', date:formatDateKey(new Date()), time:s, endTime:e, duration };
-  state.records.push(record);
-  if (state.sleepStart) {
-    state.sleepStart = null;
-    localStorage.removeItem('gabriel_sleep_start');
+function saveSleepManual(){
+  const s=document.getElementById('s_start')?.value,e=document.getElementById('s_end')?.value;
+  if(!s||!e){showToast('⚠️ Informe os horários!');return;}
+  const[sh,sm]=s.split(':').map(Number),[eh,em]=e.split(':').map(Number);
+  let duration=(eh*60+em)-(sh*60+sm);if(duration<0)duration+=24*60;
+  const record={type:'sleep',date:formatDateKey(new Date()),time:s,endTime:e,duration};
+  upsertRecord(record);
+  if(state.sleepStart){state.sleepStart=null;localStorage.removeItem('gabriel_sleep_start');
     document.getElementById('sleepCard').classList.remove('sleep-active');
-    document.getElementById('sleepEmoji').textContent = '😴';
-    document.getElementById('sleepLabel').textContent = 'Soneca';
-    document.getElementById('sleepSub').textContent = 'Início & duração';
-  }
-  save(); closeModalDirect(); renderFeed();
-  showToast(`😴 Soneca de ${duration} min registrada!`);
-  syncToDrive(record);
+    document.getElementById('sleepEmoji').textContent='😴';document.getElementById('sleepLabel').textContent='Soneca';document.getElementById('sleepSub').textContent='Início & duração';}
+  closeModalDirect();renderFeed();showToast(`😴 Soneca de ${duration} min registrada!`);pushToDrive(record);
 }
-
-function saveDiaper() {
-  const time = document.getElementById('d_time').value;
-  const hasPoop = document.getElementById('d_poop')?.checked || false;
-  const obs = document.getElementById('d_obs')?.value || '';
-  const record = { type:'diaper', date:formatDateKey(new Date()), time, hasPoop, obs };
-  state.records.push(record);
-  save(); closeModalDirect(); renderFeed();
-  showToast(hasPoop ? '💩 Troca com cocô registrada!' : '🚼 Troca registrada!');
-  syncToDrive(record);
+function saveDiaper(){
+  const time=document.getElementById('d_time').value,hasPoop=document.getElementById('d_poop')?.checked||false,obs=document.getElementById('d_obs')?.value||'';
+  const record={type:'diaper',date:formatDateKey(new Date()),time,hasPoop,obs};
+  upsertRecord(record);closeModalDirect();renderFeed();
+  showToast(hasPoop?'💩 Troca com cocô registrada!':'🚼 Troca registrada!');pushToDrive(record);
 }
-
-function previewPhoto(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = document.getElementById('photoPreview');
-    img.src = e.target.result;
-    img.style.display = 'block';
-    document.getElementById('photoUploadArea').style.display = 'none';
-  };
+function previewPhoto(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{const img=document.getElementById('photoPreview');img.src=e.target.result;img.style.display='block';const a=document.getElementById('photoUploadArea');if(a)a.style.display='none';};
   reader.readAsDataURL(file);
 }
-
-async function saveMoment() {
-  const time = document.getElementById('m_time').value;
-  const desc = document.getElementById('m_desc')?.value || '';
-  if (!desc) { showToast('⚠️ Descreva o momento!'); return; }
-
-  const btn = document.getElementById('btnSaveMoment');
-  btn.disabled = true;
-  btn.textContent = '⏳ Salvando...';
-
-  const preview = document.getElementById('photoPreview');
-  let photoUrl = null;
-
-  if (preview && preview.style.display !== 'none' && preview.src) {
-    if (state.scriptUrl) {
-      const filename = `gabriel_${formatDateKey(new Date())}_${Date.now()}.jpg`;
-      photoUrl = await uploadPhotoToDrive(preview.src, filename);
-    } else {
-      photoUrl = preview.src; // salva local se não tiver Drive
-    }
+async function saveMoment(){
+  const time=document.getElementById('m_time').value,desc=document.getElementById('m_desc')?.value||'';
+  if(!desc){showToast('⚠️ Descreva o momento!');return;}
+  const btn=document.getElementById('btnSaveMoment');btn.disabled=true;btn.textContent='⏳ Salvando...';
+  const preview=document.getElementById('photoPreview');let photoUrl=null;
+  if(preview&&preview.style.display!=='none'&&preview.src){
+    if(preview.src.startsWith('data:')){const filename=`gabriel_${formatDateKey(new Date())}_${Date.now()}.jpg`;photoUrl=await uploadPhotoToDrive(preview.src,filename);if(!photoUrl)photoUrl=preview.src;}
+    else photoUrl=preview.src;
   }
-
-  const record = { type:'moment', date:formatDateKey(new Date()), time, description:desc, photo:photoUrl };
-  state.records.push(record);
-  save(); closeModalDirect(); renderFeed();
-  showToast('📸 Momento salvo com carinho!');
-  if (state.scriptUrl) syncToDrive(record);
+  const record={type:'moment',date:formatDateKey(new Date()),time,description:desc,photo:photoUrl};
+  upsertRecord(record);closeModalDirect();renderFeed();showToast('📸 Momento salvo com carinho!');pushToDrive(record);
 }
 
-function saveDriveUrl() {
-  const url = document.getElementById('driveUrl').value.trim();
-  if (!url || !url.startsWith('https://script.google.com')) {
-    showToast('⚠️ URL inválida! Verifique o link.'); return;
-  }
-  state.scriptUrl = url;
-  localStorage.setItem('gabriel_script_url', url);
-  updateDriveBtn();
-  closeModalDirect();
-  showToast('✅ Google Drive conectado!');
+async function init(){
+  if(state.sleepStart){document.getElementById('sleepCard').classList.add('sleep-active');document.getElementById('sleepEmoji').textContent='🌙';document.getElementById('sleepLabel').textContent='Dormindo...';document.getElementById('sleepSub').textContent='Toque para acordar';}
+  renderFeed();await syncFromDrive(false);document.getElementById('loadingOverlay').style.display='none';
 }
-
-function disconnectDrive() {
-  state.scriptUrl = '';
-  localStorage.removeItem('gabriel_script_url');
-  updateDriveBtn();
-  closeModalDirect();
-  showToast('Drive desconectado.');
-}
-
-// ── Init ───────────────────────────────────────────────────
-if (state.sleepStart) {
-  document.getElementById('sleepCard').classList.add('sleep-active');
-  document.getElementById('sleepEmoji').textContent = '🌙';
-  document.getElementById('sleepLabel').textContent = 'Dormindo...';
-  document.getElementById('sleepSub').textContent = 'Toque para acordar';
-}
-updateDriveBtn();
-renderFeed();
+init();
 </script>
 </body>
 </html>
