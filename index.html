@@ -180,6 +180,7 @@
 
 <script>
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzXy7F6u3QqyGA5V7HrBJ7MylllfGOkaubc4HJmHdg1cGTXo-f11eB7W2UvN83W4--oMA/exec';
+// Drive é a fonte única — sem cache local de registros
 const state={records:[],currentDate:new Date(),sleepStart:localStorage.getItem('gabriel_sleep_start')||null,expandedId:null,editingId:null};
 
 function formatDate(d){return d.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});}
@@ -196,11 +197,10 @@ async function syncFromDrive(showFeedback=true){
   try{
     const res=await fetch(`${SCRIPT_URL}?date=${key}`);
     const data=await res.json();
-    if(data.success&&data.records&&data.records.length>0){
-      const driveRecords=data.records.map(r=>parseDriveRecord(r,key));
-      const merged=mergeRecords(state.records.filter(r=>r.date===key),driveRecords);
-      state.records=[...state.records.filter(r=>r.date!==key),...merged];
-    }
+    // Substitui completamente — Drive é a fonte única, sem merge
+    const driveRecords=(data.success&&data.records&&data.records.length>0)
+      ? data.records.map(r=>parseDriveRecord(r,key)) : [];
+    state.records=[...state.records.filter(r=>r.date!==key),...driveRecords];
     btn.className='sync-btn synced';btn.textContent='✅ Atualizado';
     setTimeout(()=>{btn.className='sync-btn';btn.textContent='🔄 Atualizar';},3000);
     if(showFeedback)showToast('✅ Dados atualizados!');
@@ -249,16 +249,13 @@ function parseDriveRecord(r,date){
   if(type==='moment')return{id,type,date,time,description:d1,photo:photoUrl||null};
   return{id,type,date,time};
 }
-function mergeRecords(local,drive){
-  const key=r=>`${r.type}-${r.time}`;
-  const map=new Map();
-  drive.forEach(r=>map.set(key(r),r));
-  local.forEach(r=>{if(!map.has(key(r)))map.set(key(r),r);});
-  return Array.from(map.values());
-}
+
 async function pushToDrive(record){
-  try{await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'saveRecord',record}),headers:{'Content-Type':'text/plain'}});}
-  catch(e){showToast('⚠️ Salvo localmente. Sem conexão.');}
+  try{
+    await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'saveRecord',record}),headers:{'Content-Type':'text/plain'}});
+    // Re-busca do Drive para garantir que o que aparece é exatamente o que está salvo
+    await syncFromDrive(false);
+  }catch(e){showToast('⚠️ Sem conexão. Registro salvo só localmente.');}
 }
 async function uploadPhotoToDrive(base64,filename){
   try{const res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'savePhoto',photo:base64,filename}),headers:{'Content-Type':'text/plain'}});const data=await res.json();return data.url||null;}
