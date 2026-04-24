@@ -212,13 +212,35 @@ async function syncFromDrive(showFeedback=true){
   renderFeed();
 }
 
+function parseTimeStr(raw){
+  // Handles: "08:30", "08:30:00", "1899-12-30T08:30:00.000Z", Date objects, numbers
+  if(!raw) return '--:--';
+  const s=raw.toString().trim();
+  // If it contains 'T' it's an ISO date string from Sheets
+  if(s.includes('T')){
+    const d=new Date(s);
+    if(!isNaN(d)) return d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }
+  // If it matches HH:MM or HH:MM:SS
+  const m=s.match(/(\d{1,2}):(\d{2})/);
+  if(m) return m[1].padStart(2,'0')+':'+m[2];
+  // If it's a numeric fraction (Sheets serial time: 0.5 = 12:00)
+  const n=parseFloat(s);
+  if(!isNaN(n)&&n>=0&&n<1){
+    const totalMin=Math.round(n*24*60);
+    const h=Math.floor(totalMin/60),mn=totalMin%60;
+    return String(h).padStart(2,'0')+':'+String(mn).padStart(2,'0');
+  }
+  return s.slice(0,5)||'--:--';
+}
+
 function parseDriveRecord(r,date){
   const typeRaw=(r.type||'').toString();
   let type='feeding';
   if(typeRaw.includes('Soneca')||typeRaw.includes('😴'))type='sleep';
   else if(typeRaw.includes('Fralda')||typeRaw.includes('🚼'))type='diaper';
   else if(typeRaw.includes('Momento')||typeRaw.includes('📸'))type='moment';
-  const time=(r.time||'').toString().slice(0,5);
+  const time=parseTimeStr(r.time);
   const d1=(r.detail1||'').toString(),d2=(r.detail2||'').toString(),obs=(r.obs||'').toString(),photoUrl=(r.photoUrl||'').toString();
   const id=uid();
   if(type==='feeding')return{id,type,date,time,volume:d1.replace(' ml','').trim()};
