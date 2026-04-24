@@ -325,9 +325,15 @@ function confirmDelete(id){
   </div>`;
   document.body.appendChild(overlay);
 }
-function deleteRecord(id){
+async function deleteRecord(id){
+  const record=state.records.find(r=>r.id===id);
+  if(!record)return;
   state.records=state.records.filter(r=>r.id!==id);
-  state.expandedId=null;renderFeed();showToast('🗑️ Registro excluído');
+  state.expandedId=null;renderFeed();showToast("🗑️ Excluindo...");
+  try{
+    await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"deleteRecord",record}),headers:{"Content-Type":"text/plain"}});
+    await syncFromDrive(false);showToast("🗑️ Registro excluído!");
+  }catch(e){showToast("⚠️ Erro ao excluir no Drive");}
 }
 function editRecord(id){
   const record=state.records.find(r=>r.id===id);
