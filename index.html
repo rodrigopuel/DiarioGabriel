@@ -258,6 +258,22 @@ async function syncFromDrive(showFeedback = false) {
   renderFeed();
 }
 
+// ── Limpa qualquer formato de horário para HH:MM ─────────────
+function cleanTime(raw) {
+  if (!raw) return '';
+  const s = raw.toString().trim();
+  // Já é HH:MM ou HH:MM:SS
+  const m = s.match(/(\d{1,2}):(\d{2})/);
+  if (m) return m[1].padStart(2,'0') + ':' + m[2];
+  // Fração decimal do Sheets (0.5 = 12:00)
+  const n = parseFloat(s);
+  if (!isNaN(n) && n >= 0 && n < 1) {
+    const total = Math.round(n * 24 * 60);
+    return String(Math.floor(total/60)).padStart(2,'0') + ':' + String(total%60).padStart(2,'0');
+  }
+  return '';
+}
+
 // ── Converte registro do Drive para formato do app ─────────
 function parseDriveRecord(r, date) {
   const typeRaw = (r.type || '').toString().toUpperCase();
@@ -275,9 +291,9 @@ function parseDriveRecord(r, date) {
   const photoUrl = (r.photoUrl || '').toString();
 
   if (type === 'feeding') return { id, type, date, time, volume: d1.replace(' ml','').trim() };
-  if (type === 'sleep')   return { id, type, date, time, endTime: d1, duration: parseInt(d2) || 0 };
+  if (type === 'sleep')   return { id, type, date, time, endTime: cleanTime(d1), duration: parseInt(d2) || 0 };
   if (type === 'diaper')  return { id, type, date, time, hasPoop: d1.toLowerCase().includes('coc'), obs };
-  if (type === 'moment')  return { id, type, date, time, description: d1, photo: photoUrl || null };
+  if (type === 'moment')  return { id, type, date, time, description: d1, photo: (photoUrl && photoUrl.startsWith('http')) ? photoUrl : null };
   return { id, type, date, time };
 }
 
