@@ -195,23 +195,53 @@ const state = {
 };
 
 // ── Fuso horário São Paulo ─────────────────────────────────
+// Retorna a data atual em SP como objeto Date "ancorado" no fuso
 function nowSP() {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
+  // Usa Intl para extrair as partes em SP e construir um Date local com elas
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIMEZONE,
+    year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+  }).formatToParts(new Date());
+  const get = type => parts.find(p => p.type === type).value;
+  return new Date(parseInt(get('year')), parseInt(get('month'))-1, parseInt(get('day')),
+    parseInt(get('hour')), parseInt(get('minute')), parseInt(get('second')));
 }
+
+// Retorna chave YYYY-MM-DD usando o fuso de São Paulo
 function dateKeySP(d) {
-  const sp = new Date((d || new Date()).toLocaleString('en-US', { timeZone: TIMEZONE }));
-  const y  = sp.getFullYear();
-  const m  = String(sp.getMonth() + 1).padStart(2, '0');
-  const dy = String(sp.getDate()).padStart(2, '0');
+  const date = d instanceof Date ? d : new Date(d || Date.now());
+  // Se o Date veio do nowSP() ou changeDay, ele já está "ancorado" como local
+  // Para datas vindas de fora (new Date()), converte via Intl
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIMEZONE,
+    year:'numeric', month:'2-digit', day:'2-digit'
+  }).formatToParts(date);
+  const get = type => parts.find(p => p.type === type).value;
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+// Para quando state.currentDate é um Date "âncora" (já em SP), usa direto getFullYear etc
+function dateKeyFromAnchor(d) {
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth() + 1).padStart(2, '0');
+  const dy = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dy}`;
 }
+
 function timeNowSP() {
-  const sp = nowSP();
-  return String(sp.getHours()).padStart(2,'0') + ':' + String(sp.getMinutes()).padStart(2,'0');
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIMEZONE, hour:'2-digit', minute:'2-digit', hour12:false
+  }).formatToParts(new Date());
+  const h = parts.find(p => p.type === 'hour').value;
+  const m = parts.find(p => p.type === 'minute').value;
+  return (h === '24' ? '00' : h) + ':' + m;
 }
+
 function formatDateSP(d) {
-  return new Date(d.toLocaleString('en-US', { timeZone: TIMEZONE }))
-    .toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: TIMEZONE, weekday:'long', day:'numeric', month:'long'
+  }).format(d || new Date());
 }
 
 // ── Utilitários gerais ─────────────────────────────────────
@@ -231,7 +261,7 @@ async function syncFromDrive(showFeedback = false) {
   btn.className = 'sync-btn syncing';
   btn.textContent = '⏳ Atualizando...';
 
-  const key = dateKeySP(state.currentDate);
+  const key = dateKeyFromAnchor(state.currentDate);
   try {
     const res  = await fetch(`${SCRIPT_URL}?date=${key}`);
     const data = await res.json();
@@ -335,7 +365,7 @@ async function uploadPhoto(base64, filename) {
 
 // ── Renderização ───────────────────────────────────────────
 function renderFeed() {
-  const key     = dateKeySP(state.currentDate);
+  const key     = dateKeyFromAnchor(state.currentDate);
   const isToday = key === dateKeySP(new Date());
   document.getElementById('dateNavLabel').textContent =
     isToday ? 'Hoje' : new Date(state.currentDate)
@@ -396,7 +426,8 @@ function toggleExpand(id) {
 function changeDay(delta) {
   const d = new Date(state.currentDate);
   d.setDate(d.getDate() + delta);
-  if (dateKeySP(d) <= dateKeySP(new Date())) {
+  // Compara como âncora local (state.currentDate é âncora) com hoje em SP
+  if (dateKeyFromAnchor(d) <= dateKeySP(new Date())) {
     state.currentDate = d;
     renderFeed();
     syncFromDrive(false);
